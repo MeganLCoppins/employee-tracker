@@ -97,31 +97,46 @@ function addDepartment(){
     })
 }
 
-// function addRole(){
-//     inquirer.prompt([
-//         {
-//             type: "input",
-//             name: "roleTitle",
-//             message: "What role would you like to add?"
-//         },
-//         {
-//             type: "input",
-//             name: "roleSalary",
-//             message: "What is the salary for this role?",
-//         },
-//         {
-//             type: "list",
-//             name: "roleID",
-//             message: "What department does this role belong in?",
-//             choices: ["IT", "Finance", "Human Resources", "Sales"]
-//         }
-//     ]).then(function(res){
-//         connection.query("INSERT INTO employee_role SET ?",
-//         {
-//             title: res.roleTitle,
-//             salary: res.roleSalary,
-//             department_id: res.roleID
-//         }
-//         )
-//     })
-// }
+function addRole(){
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "roleTitle",
+            message: "What role would you like to add?"
+        },
+        {
+            type: "input",
+            name: "roleSalary",
+            message: "What is the salary for this role?",
+        },
+        {
+            type: "list",
+            name: "roleID",
+            message: "What department does this role belong in?",
+            choices: ["IT", "Finance", "Human Resources", "Sales"]
+        }
+    ]).then(function(res){
+        switch(res.roleID){
+            case "IT":
+               var ID = "1";
+                break;
+            case "Finance":
+                var ID = "2";
+                break;
+            case "Human Resources":
+                var ID = "3";
+                break;
+            case "Sales":
+                var ID = "4";
+                break;
+        };
+        connection.query("INSERT INTO employee_role SET ?",
+        {
+            title: res.roleTitle,
+            salary: res.roleSalary,
+            department_id: ID
+        }
+        )
+    })
+}
+// SELECT id FROM department WHERE department_name = "IT"
