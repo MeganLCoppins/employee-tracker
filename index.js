@@ -27,7 +27,7 @@ connection.connect(function(err) {
             name: "choice",
             type: "list",
             message: "Would you like to add or view departments, roles, employees or update employee roles?",
-            choices: ["Add departments, roles, employees", "View departments, roles, employees", "Update employee roles", "EXIT"]
+            choices: ["Add departments, roles, employees", "View departments, roles, employees", "Update employee role", "EXIT"]
         }
     ]).then(function(res){
         switch(res.choice){
@@ -36,8 +36,8 @@ connection.connect(function(err) {
                 break;
             case "View departments, roles, employees":
                 viewFunction();
-            // case "Update employee roles":
-            //     updateFunction();
+            case "Update employee role":
+                updateRole();
             case "EXIT":
                 break;
         }
@@ -143,7 +143,7 @@ function addRole(){
         });
     });
 };
-// function to add employee
+// function to add employee role when adding employee
 function addEmployee(){
     connection.query("SELECT * FROM employee_role", function(err, results){
         if(err) throw err;
@@ -172,7 +172,7 @@ function addEmployee(){
         })
     })
 }
-
+// function to get employees manager if they have one and add new employee
 function getManager(chosenRole){
     connection.query("SELECT employee.manager_id, CONCAT(manager.first_name, ' ', manager.last_name) AS managerName FROM employee LEFT JOIN employee AS manager on manager.id = employee.manager_id WHERE employee.manager_id IS NOT NULL", function(err, results){
         if(err) throw err;
@@ -275,3 +275,72 @@ function viewEmployees(){
         start();
     });
 };
+// function to chose what role to update employees to
+function updateRole(){
+    connection.query("SELECT * FROM employee_role", function(err, results){
+        if(err) throw err;
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "role",
+                message: "What is the role going to be updated to?",
+                choices: function(){
+                    var roleChosen = [];
+                    for(var i = 0; i < results.length; i++){
+                        roleChosen.push(results[i].title);
+                    }
+                    return roleChosen;
+                }
+            }
+        ]).then(function(res){
+            var roleChoice;
+            for (var i = 0; i < results.length; i++){
+                if(results[i].title === res.role){
+                    roleChoice = results[i]
+                }
+            }
+            updateFunction(roleChoice.id);
+        })
+    })
+}
+// update employee role
+function updateFunction(roleChoice){
+    connection.query("SELECT * FROM employee", function(err, results){
+        if(err) throw err;
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "employeeID",
+                message: "For which employee would you like to update their role?",
+                choices: function(){
+                    var employeeChoice = [];
+                    for(var i = 0; i < results.length; i++){
+                        employeeChoice.push(results[i].first_name);
+                    }
+                    return employeeChoice;
+                }
+            },
+        ]).then(function(res){
+            var employeeChosen;
+            for (var i = 0; i < results.length; i++){
+                if(results[i].first_name === res.employeeID){
+                    employeeChosen = results[i]
+                }
+            }
+            console.log(roleChoice);
+            connection.query("UPDATE employee SET ? WHERE ?",[
+            {
+                id: employeeChosen.id
+            },
+            {
+                role_id: roleChoice
+            }],
+            function(err){
+                if(err) throw err;
+                console.log("Employee role was updated!");
+                start();
+            }
+            )
+        });
+    });
+}
