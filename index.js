@@ -1,7 +1,6 @@
 require("console.table");
 const mysql = require("mysql");
 const inquirer = require("inquirer");
-// require("console.table");
 
 const connection = mysql.createConnection({
   host: "localhost",
@@ -20,8 +19,6 @@ connection.connect(function(err) {
     // run the start function after the connection is made to prompt the user
     start();
   });
-
-//   module.exports = connection;
 
 // function which prompts the user for what action they should take
   function start() {
@@ -42,7 +39,6 @@ connection.connect(function(err) {
             // case "Update employee roles":
             //     updateFunction();
             case "EXIT":
-                connection.end();
                 break;
         }
     })
@@ -115,7 +111,7 @@ function addRole(){
                 message: "What is the salary for this role?",
             },
             {
-                type: "rawlist",
+                type: "list",
                 name: "departID",
                 message: "What department does this role belong in?",
                 choices: function() {
@@ -149,42 +145,85 @@ function addRole(){
 };
 // function to add employee
 function addEmployee(){
-    inquirer.prompt([
-        {
-            type: "input",
-            name: "firstName",
-            message: "What is the employees first name?"
-        },
-        {
-            type: "input",
-            name: "lastName",
-            message: "What is the employees last name?"
-        },
-        {
-            type: "list",
-            name: "manager",
-            message: "Does this employee have a manager?",
-            choices: ["yes", "no"]
-        }
-    ]).then(function(res){
-        switch(res.manager){
-            case "yes":
-                addWithManager(res.firstName, res.lastName);
-                break;
-            case "no":
-                addWithoutManager(res.firstName, res.lastName);
-                break;
-        }
+    connection.query("SELECT * FROM employee_role", function(err, results){
+        if(err) throw err;
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "role",
+                message: "What role will the employing be filling?",
+                choices: function(){
+                    var roleChoice = [];
+                    for(var i=0; i < results.length; i++){
+                        roleChoice.push(results[i].title);
+                    }
+                    return roleChoice;
+                }
+            }
+        ]).then(function(res){
+            var chosenRole;
+            for (var i = 0; i < results.length; i++){
+                if(results[i].title === res.role){
+                    chosenRole = results[i]
+                }
+            }
+            console.log(chosenRole.id);
+            getManager(chosenRole.id);
+        })
     })
+}
+
+function getManager(chosenRole){
+    connection.query("SELECT employee.manager_id, CONCAT(manager.first_name, ' ', manager.last_name) AS managerName FROM employee LEFT JOIN employee AS manager on manager.id = employee.manager_id WHERE employee.manager_id IS NOT NULL", function(err, results){
+        if(err) throw err;
+        inquirer.prompt([
+            {
+                type: "input",
+                name: "firstName",
+                message: "What is the employees first name?",
+            },
+            {
+                type: "input",
+                name: "lastName",
+                message: "What is the employees last name?"
+            },
+            {
+                type: "list",
+                name: "manager",
+                message: "Who is the employees manager?",
+                choices: function() {
+                    var managerChoice = [];
+                    for (var i = 0; i < results.length; i++) {
+                      managerChoice.push(results[i].managerName);
+                    }
+                    managerChoice.push("None");
+                    return managerChoice;
+                }
+            }
+        ]).then(function(res){
+            var chosenManager;
+            for (var i=0; i < results.length; i++){
+                if(res.manager === "None"){
+                    chosenManager = null;
+                }else if(results[i].managerName === res.manager){
+                    chosenManager = results[i]
+                }
+            }
+            connection.query("INSERT INTO employee SET ?",
+            {
+                first_name: res.firstName,
+                last_name: res.lastName,
+                role_id: chosenRole,
+                manager_id: chosenManager.manager_id
+            },
+            function(err){
+                if(err) throw err;
+                console.log("Your employee was added!");
+                start();
+            })
+        })
+    });
 };
-
-// function addWithManager(firstName, lastName){
-//     connection.query("SELECT id, title FROM employee_role", (function(err, data){
-
-//     }))
-// }
-// SELECT id FROM department WHERE department_name = "IT"
-// connection.query("SELECT id FROM department WHERE department_name = IT")
 
 // prompts which category user would like to view
 function viewFunction(){
@@ -197,13 +236,13 @@ function viewFunction(){
         }
     ]).then(function(res){
         switch (res.choice) {
-            case "Department":
+            case "Departments":
                 viewDepartments();
                 break;
-            case "Employee":
+            case "Employees":
                 viewEmployees();
                 break;
-            case "Role":
+            case "Roles":
                 viewRoles();
                 break;
             case "EXIT":
@@ -230,8 +269,9 @@ function viewRoles(){
 };
 // to view employees
 function viewEmployees(){
-    connection.query("SELECT * FROM employee", function(err, data){
-        console.table(query.sql);
+    connection.query("SELECT employee.id, employee.first_name, employee.last_name, employee_role.title, department.department_name AS department, employee_role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee LEFT JOIN role on employee.role_id = employee_role.id LEFT JOIN department on employee_role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id;", function(err, res){
+        if(err) throw err;
+        console.table(res);
+        start();
     });
-    start();
 };
