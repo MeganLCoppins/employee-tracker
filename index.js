@@ -1,5 +1,7 @@
+require("console.table");
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+// require("console.table");
 
 const connection = mysql.createConnection({
   host: "localhost",
@@ -19,9 +21,9 @@ connection.connect(function(err) {
     start();
   });
 
-  module.exports = connection;
+//   module.exports = connection;
 
-  // function which prompts the user for what action they should take
+// function which prompts the user for what action they should take
   function start() {
     inquirer.prompt([
         {
@@ -37,8 +39,8 @@ connection.connect(function(err) {
                 break;
             case "View departments, roles, employees":
                 viewFunction();
-            case "Update employee roles":
-                updateFunction();
+            // case "Update employee roles":
+            //     updateFunction();
             case "EXIT":
                 connection.end();
                 break;
@@ -96,47 +98,140 @@ function addDepartment(){
         )
     })
 }
-
+// function to add role
 function addRole(){
+// query for department name and id from department table
+    connection.query("SELECT * FROM department", function(err, results){
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                type: "input",
+                name: "roleTitle",
+                message: "What role would you like to add?"
+            },
+            {
+                type: "input",
+                name: "roleSalary",
+                message: "What is the salary for this role?",
+            },
+            {
+                type: "rawlist",
+                name: "departID",
+                message: "What department does this role belong in?",
+                choices: function() {
+                    var deptArray = [];
+                    for (var i = 0; i < results.length; i++) {
+                      deptArray.push(results[i].department_name);
+                    }
+                    return deptArray;
+                  },
+            }
+        ]).then(function(res){
+            var chosenDepart;
+            for (var i=0; i < results.length; i++){
+                if(results[i].department_name === res.departID){
+                    chosenDepart = results[i]
+                }
+            }
+            connection.query("INSERT INTO employee_role SET ?",
+            {
+                title: res.roleTitle,
+                salary: res.roleSalary,
+                department_id: chosenDepart.id
+            },
+            function(err){
+                if(err) throw err;
+                console.log("Your role was added successfully!");
+                start();
+            });
+        });
+    });
+};
+// function to add employee
+function addEmployee(){
     inquirer.prompt([
         {
             type: "input",
-            name: "roleTitle",
-            message: "What role would you like to add?"
+            name: "firstName",
+            message: "What is the employees first name?"
         },
         {
             type: "input",
-            name: "roleSalary",
-            message: "What is the salary for this role?",
+            name: "lastName",
+            message: "What is the employees last name?"
         },
         {
             type: "list",
-            name: "roleID",
-            message: "What department does this role belong in?",
-            choices: ["IT", "Finance", "Human Resources", "Sales"]
+            name: "manager",
+            message: "Does this employee have a manager?",
+            choices: ["yes", "no"]
         }
     ]).then(function(res){
-        switch(res.roleID){
-            case "IT":
-               var ID = "1";
+        switch(res.manager){
+            case "yes":
+                addWithManager(res.firstName, res.lastName);
                 break;
-            case "Finance":
-                var ID = "2";
+            case "no":
+                addWithoutManager(res.firstName, res.lastName);
                 break;
-            case "Human Resources":
-                var ID = "3";
+        }
+    })
+};
+
+// function addWithManager(firstName, lastName){
+//     connection.query("SELECT id, title FROM employee_role", (function(err, data){
+
+//     }))
+// }
+// SELECT id FROM department WHERE department_name = "IT"
+// connection.query("SELECT id FROM department WHERE department_name = IT")
+
+// prompts which category user would like to view
+function viewFunction(){
+    inquirer.prompt([
+        {
+            name: "choice",
+            type: "list",
+            message: "Would you like to view departments, employees, or roles?",
+            choices: ["Departments", "Employees", "Roles", "EXIT"]
+        }
+    ]).then(function(res){
+        switch (res.choice) {
+            case "Department":
+                viewDepartments();
                 break;
-            case "Sales":
-                var ID = "4";
+            case "Employee":
+                viewEmployees();
+                break;
+            case "Role":
+                viewRoles();
+                break;
+            case "EXIT":
+                start();
                 break;
         };
-        connection.query("INSERT INTO employee_role SET ?",
-        {
-            title: res.roleTitle,
-            salary: res.roleSalary,
-            department_id: ID
-        }
-        )
-    })
-}
-// SELECT id FROM department WHERE department_name = "IT"
+    });
+};
+// to view departments
+function viewDepartments(){
+    connection.query("SELECT * FROM department", function(err, res){
+        if(err) throw err;
+        console.table(res);
+        start();
+    });
+};
+// to view employee roles
+function viewRoles(){
+    connection.query("SELECT * FROM employee_role", function(err, res){
+        if(err) throw err;
+        console.table(res);
+        start();
+    });
+};
+// to view employees
+function viewEmployees(){
+    connection.query("SELECT * FROM employee", function(err, data){
+        console.table(query.sql);
+    });
+    start();
+};
