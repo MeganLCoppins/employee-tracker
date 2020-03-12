@@ -28,7 +28,7 @@ To start the application the user must run:
 
 ## Example of Application
 
-Below are giphs displaying each functionality of the application:
+The functionality of the application is displayed below:
 
 <img src="https://media.giphy.com/media/j5nf8wOHedaHdaZH4S/giphy.gif" alt="add dept gif">
 
