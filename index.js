@@ -20,7 +20,7 @@ connection.connect(function(err) {
     start();
   });
 
-// function which prompts the user for what action they should take
+// function which prompts the user for what action they want to take
   function start() {
     inquirer.prompt([
         {
@@ -36,8 +36,10 @@ connection.connect(function(err) {
                 break;
             case "View departments, roles, employees":
                 viewFunction();
+                break;
             case "Update employee role":
                 updateRole();
+                break;
             case "EXIT":
                 break;
         }
@@ -88,12 +90,13 @@ function addDepartment(){
             function(err) {
                 if (err) throw err;
                 console.log("Your department was added successfully!");
-
+    // prompt user to choose from applications beginning options
                 start();
             }
         )
     })
 }
+
 // function to add role
 function addRole(){
 // query for department name and id from department table
@@ -138,12 +141,14 @@ function addRole(){
             function(err){
                 if(err) throw err;
                 console.log("Your role was added successfully!");
+    // prompt user to choose from applications beginning options
                 start();
             });
         });
     });
 };
-// function to add employee role when adding employee
+
+// function to get the role the added employee will be filling
 function addEmployee(){
     connection.query("SELECT * FROM employee_role", function(err, results){
         if(err) throw err;
@@ -167,12 +172,11 @@ function addEmployee(){
                     chosenRole = results[i]
                 }
             }
-            console.log(chosenRole.id);
             getManager(chosenRole.id);
         })
     })
 }
-// function to get employees manager if they have one and add new employee
+// function to get employees manager if they have one and then add new employee
 function getManager(chosenRole){
     connection.query("SELECT employee.manager_id, CONCAT(manager.first_name, ' ', manager.last_name) AS managerName FROM employee LEFT JOIN employee AS manager on manager.id = employee.manager_id WHERE employee.manager_id IS NOT NULL", function(err, results){
         if(err) throw err;
@@ -191,20 +195,22 @@ function getManager(chosenRole){
                 type: "list",
                 name: "manager",
                 message: "Who is the employees manager?",
+        // grabbing existing managers to choose from
                 choices: function() {
                     var managerChoice = [];
                     for (var i = 0; i < results.length; i++) {
                       managerChoice.push(results[i].managerName);
                     }
-                    managerChoice.push("None");
+        // option if employee has no manager
+                    managerChoice.push("Does not have a manager");
                     return managerChoice;
                 }
             }
         ]).then(function(res){
             var chosenManager;
             for (var i=0; i < results.length; i++){
-                if(res.manager === "None"){
-                    chosenManager = null;
+                if(res.manager === "Does not have a manager"){
+                    chosenManager = "";
                 }else if(results[i].managerName === res.manager){
                     chosenManager = results[i]
                 }
@@ -219,6 +225,7 @@ function getManager(chosenRole){
             function(err){
                 if(err) throw err;
                 console.log("Your employee was added!");
+    // prompt user to choose from applications beginning options
                 start();
             })
         })
@@ -256,6 +263,7 @@ function viewDepartments(){
     connection.query("SELECT * FROM department", function(err, res){
         if(err) throw err;
         console.table(res);
+    // prompt user to choose from applications beginning options
         start();
     });
 };
@@ -264,18 +272,21 @@ function viewRoles(){
     connection.query("SELECT * FROM employee_role", function(err, res){
         if(err) throw err;
         console.table(res);
+    // prompt user to choose from applications beginning options
         start();
     });
 };
 // to view employees
 function viewEmployees(){
-    connection.query("SELECT employee.id, employee.first_name, employee.last_name, employee_role.title, department.department_name AS department, employee_role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee LEFT JOIN role on employee.role_id = employee_role.id LEFT JOIN department on employee_role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id;", function(err, res){
+    connection.query("SELECT * FROM employee", function(err, res){
         if(err) throw err;
         console.table(res);
+    // prompt user to choose from applications beginning options
         start();
     });
 };
-// function to chose what role to update employees to
+
+// function to chose what role to update to
 function updateRole(){
     connection.query("SELECT * FROM employee_role", function(err, results){
         if(err) throw err;
@@ -303,7 +314,7 @@ function updateRole(){
         })
     })
 }
-// update employee role
+// select employee and update employee role
 function updateFunction(roleChoice){
     connection.query("SELECT * FROM employee", function(err, results){
         if(err) throw err;
@@ -327,17 +338,17 @@ function updateFunction(roleChoice){
                     employeeChosen = results[i]
                 }
             }
-            console.log(roleChoice);
             connection.query("UPDATE employee SET ? WHERE ?",[
             {
-                id: employeeChosen.id
+                role_id: roleChoice
             },
             {
-                role_id: roleChoice
+                id: employeeChosen.id
             }],
             function(err){
                 if(err) throw err;
                 console.log("Employee role was updated!");
+    // prompt user to choose from applications beginning options
                 start();
             }
             )
